@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Unet</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+            background-color: transparent;
+            user-select: none;
+            border-radius: 5px;
+        }
+
+        body.maximized, html.maximized {
+            border-radius: 0;
+        }
+
+        #example_ui_demo, #frame_1 {
+            width: 100%; height: 100%; position: relative; overflow: hidden; background: #00000000;
+            display: flex; flex-direction: column;
+            border-radius: 5px;
+        }
+
+        body.maximized #example_ui_demo, html.maximized #example_ui_demo {
+            border-radius: 0;
+        }
+
+        #frame_5 {
+            width: 100%; height: 103px; flex: 0 0 103px; position: relative; top: 0; left: 0;
+            background: transparent; z-index: 10001;
+        }
+
+        #titlebar_unet {
+            width: 100%; height: 50px; position: absolute; top: 0; left: 0;
+            padding-right: 120px;
+            background: rgba(29, 29, 29, 0.60);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            will-change: transform, opacity;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            display: flex; align-items: center;
+            position: relative;
+            box-sizing: border-box;
+            -webkit-app-region: drag;
+            z-index: 10002;
+        }
+
+        .tabs-wrapper {
+            display: flex;
+            align-items: center;
+            flex: 1 1 auto;
+            max-width: calc(100% - 160px);
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .tab-container {
+            display: flex;
+            align-items: center;
+            flex: 1 1 auto;
+            overflow-x: auto;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .tab-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .window-controls {
+            position: absolute; right: 0; top: 0; width: 120px; height: 100%;
+            display: flex; justify-content: flex-end; align-items: center;
+            -webkit-app-region: no-drag;
+            z-index: 10003;
+        }
+        .win-btn {
+            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
+            background: transparent; cursor: pointer; transition: background 0.2s;
+        }
+        .win-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        #close_window_button:hover { background: #e81123; }
+
+        #rectangle_1 {
+            width: 9px; height: 9px; border: 3px solid #ffffff; border-radius: 4px;
+        }
+
+        .tab-system {
+            display: flex;
+            flex: 1 1 auto;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            min-width: 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            -webkit-app-region: drag;
+        }
+        .tab-system::-webkit-scrollbar { display: none; }
+        .tab {
+            flex: 1 1 120px;
+            min-width: 60px;
+            max-width: 180px;
+            height: 40px;
+            border-radius: 10px;
+            position: relative;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px;
+            transition: all 0.15s ease;
+            user-select: none;
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.06);
+            -webkit-app-region: no-drag;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .avatar-tab {
+            width: 22px;
+            height: 22px;
+            background: rgba(255,255,255,0.22);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0;
+            position: relative;
+        }
+
+        .name-tab {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            flex: 1;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0.94;
+        }
+
+        .close-tab-button {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            position: relative;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, opacity 0.2s ease;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .tab.small {
+            min-width: 45px;
+            max-width: 120px;
+        }
+
+        .tab.dragging { opacity: 0.5; transform: scale(0.98); }
+        .tab.drag-over { transform: translateX(10px); }
+        .tab.active { background: transparent; border-color: transparent; }
+        .tab.inactive { background: rgba(255, 255, 255, 0.08); border-color: transparent; }
+        .tab.inactive:hover { background: rgba(255, 255, 255, 0.14); }
+
+        .avatar-tab img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-tab span { font-size: 12px; color: #fff; }
+        .tab.inactive .name-tab { opacity: 0.75; }
+        .tab.inactive .close-tab-button { opacity: 0.7; }
+        .close-tab-button {
+            width: 18px; height: 18px; border-radius: 50%; position: absolute; right: 8px; top: 11px;
+            display: flex; align-items: center; justify-content: center; transition: background 0.2s ease, opacity 0.2s ease;
+            background: rgba(255,255,255,0.1);
+        }
+        .close-tab-button:hover { background: rgba(255,255,255,0.18); }
+
+        #add_tab_button {
+            flex: 0 0 auto;
+            width: 28px; height: 28px; background: transparent; border: none;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: #ffffff; font-size: 20px; font-weight: 700; cursor: pointer;
+            margin-left: 5px;
+            transition: transform 0.15s, background 0.2s;
+            user-select: none; position: relative; -webkit-app-region: no-drag;
+        }
+        #add_tab_button:hover {
+            background: rgba(255,255,255,0.06);
+            transform: scale(1.04);
+        }
+
+        #frame_4 {
+            width: 100%; height: 53px; position: absolute; top: 50px; left: 0;
+            background: rgba(29, 29, 29, 0.60);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            will-change: transform, opacity;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            display: flex; align-items: center; -webkit-app-region: no-drag;
+            z-index: 10002;
+        }
+
+        #frame_10 { position: absolute; left: 10px; top: 7px; width: 123px; height: 39px; display: flex; }
+        #frame_11 { position: absolute; right: 10px; top: 7px; width: 123px; height: 39px; display: flex; justify-content: flex-end; }
+        .nav-btn { width: 39px; height: 39px; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); }
+        .nav-btn img { width: 15px; height: 15px; pointer-events: none; }
+
+        #frame_2 {
+            position: absolute; left: 142px; top: 8px; height: 37px; width: calc(100% - 283px);
+            background: rgba(255, 255, 255, 0.08); border-radius: 59px; display: flex; align-items: center;
+            transition: background 0.22s ease;
+        }
+        #frame_2.active-urlbar {
+            background: rgba(255, 255, 255, 0.18);
+        }
+        #see_infomation_website { width: 23px; height: 23px; background: rgba(255,255,255,0.12); border-radius: 50%; position: absolute; left: 10px; display: flex; align-items: center; justify-content: center; }
+        #mark_this_tag_button { width: 23px; height: 23px; position: absolute; right: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        #url_input {
+            position: absolute; left: 44px; width: calc(100% - 90px); height: 20px; background: transparent;
+            border: none; color: #ffffff; font-family: 'Inter'; font-size: 13px; outline: none;
+            user-select: text;
+        }
+        #url_input:focus {
+            color: #fff;
+        }
+
+        .webview-container {
+            flex: 1 1 auto; width: 100%; position: absolute; top: 103px; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; background: #000000; overflow: hidden; z-index: 1;
+        }
+        webview {
+            display: none;
+            flex: 1 1 auto;
+            width: 100%; height: 100%;
+            border: none;
+        }
+        webview.active { display: flex; }
+
+        /* Khung bọc menu chuột phải */
+        .unet-context-menu {
+            position: fixed;
+            z-index: 99999;
+            width: 220px;
+            background: rgba(15, 15, 15, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 6px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            font-family: sans-serif;
+            font-size: 13px;
+            color: #e0e0e0;
+            user-select: none;
+        }
+        .unet-context-menu .menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .unet-context-menu .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        .unet-context-menu .menu-separator {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 4px 0;
+        }
+
+        /* Style chung cho tất cả dropdown */
+        .unet-dropdown {
+            position: fixed;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36);
+            color: #fff;
+            font-family: sans-serif;
+            font-size: 13px;
+            padding: 6px 0;
+            will-change: transform, opacity;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            z-index: 100000;
+            width: 240px;
+        }
+        .unet-dropdown .dropdown-item {
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .unet-dropdown .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .unet-dropdown .dropdown-item .icon { margin-right: 10px; font-size: 14px; }
+        .unet-dropdown .dropdown-item .hotkey { margin-left: auto; color: #888; font-size: 11px; }
+        .unet-dropdown .dropdown-item .arrow { margin-left: auto; color: #666; }
+        .unet-dropdown .dropdown-separator {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 6px 0;
+        }
+        .unet-dropdown .dropdown-header { padding: 10px 14px; }
+        .unet-dropdown .dropdown-header h3 { margin: 0; font-size: 14px; }
+        .unet-dropdown .profile-card { text-align: center; padding: 15px; }
+        .unet-dropdown .profile-card .avatar { 
+            width: 50px; height: 50px; background: #0078d4; border-radius: 50%; 
+            margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .unet-dropdown .bookmark-form { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+        .unet-dropdown .bookmark-form label { font-size: 12px; color: #ccc; }
+        .unet-dropdown .bookmark-form input,
+        .unet-dropdown .bookmark-form select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #fff; }
+        .unet-dropdown .bookmark-actions { display: flex; justify-content: space-between; gap: 10px; }
+        .unet-dropdown .btn-done,
+        .unet-dropdown .btn-delete { flex: 1; padding: 8px 10px; border-radius: 8px; border: none; cursor: pointer; }
+        .unet-dropdown .btn-done { background: #1a73e8; color: #fff; }
+        .unet-dropdown .btn-delete { background: rgba(255,255,255,0.08); color: #fff; }
+        .unet-dropdown .dropdown-footer { padding: 10px 14px; cursor: pointer; color: #9ab; }
+        .unet-dropdown .dropdown-footer:hover { background: rgba(255,255,255,0.1); }
+        .unet-dropdown .btn-close-pop { background: transparent; border: none; color: #fff; font-size: 14px; cursor: pointer; }
+        .find-bar {
+            position: absolute;
+            right: 10px;
+            top: 8px;
+            left: 180px;
+            height: 37px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+            border-radius: 59px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            z-index: 100001;
+        }
+        .find-bar input {
+            flex: 1;
+            height: 24px;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #fff;
+            font-size: 13px;
+        }
+        .find-bar button {
+            border: none;
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .find-bar button:hover { background: rgba(255,255,255,0.16); }
+        .download-list { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 10px; max-height: 260px; overflow-y: auto; }
+        .download-item-file { display: flex; align-items: flex-start; gap: 10px; }
+        .download-item-file .file-icon { font-size: 18px; line-height: 1; margin-top: 4px; }
+        .download-item-file .file-info { display: flex; flex-direction: column; gap: 4px; }
+        .download-item-file .file-name { font-weight: 600; font-size: 13px; }
+        .download-item-file .file-meta { font-size: 12px; color: #bbb; }
+        .bookmark-list { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 10px; max-height: 260px; overflow-y: auto; }
+        .bookmark-entry { justify-content: space-between; gap: 10px; }
+        .bookmark-entry .bookmark-url { font-size: 12px; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn-open-bookmark { background: transparent; border: none; color: #9ab; cursor: pointer; font-size: 12px; }
+        .history-entry { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+        .history-entry .history-url { color: #ccc; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .history-meta { color: #aaa; font-size: 11px; }
+        .history-list { display: flex; flex-direction: column; gap: 10px; padding: 0 14px 10px; max-height: 260px; overflow-y: auto; }
+        .flex-space { justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div id="example_ui_demo">
+    <div id="frame_1">
+
+        <div id="frame_5">
+            <div id="titlebar_unet" class="titlebar" ondblclick="windowAction('window-maximize')">
+
+                <div class="tabs-wrapper">
+                    <div class="tab-container">
+                        <div id="tab_system_root" class="tab-system"></div>
+                    </div>
+                    <div id="add_tab_button" class="btn-add-tab" onclick="createNewTab()">+</div>
+                </div>
+
+                <div class="window-controls">
+                    <div id="hide_window_button" class="win-btn" onclick="windowAction('window-minimize')">
+                        <span style="color:#ffffff; font-size:20px; font-weight:bold; margin-top:-10px;">_</span>
+                    </div>
+                    <div id="maximize_window_button" class="win-btn" onclick="windowAction('window-maximize')">
+                        <div id="rectangle_1"></div>
+                    </div>
+                    <div id="close_window_button" class="win-btn" onclick="windowAction('window-close')">
+                        <img src="Icons/close.png" style="width:16px;">
+                    </div>
+                </div>
+            </div>
+
+            <div id="frame_4">
+                <div id="frame_10">
+                    <div id="back_button" class="nav-btn" onclick="goBack()"><img src="Icons/next.png" style="transform: rotate(180deg);"></div>
+                    <div id="next_button" class="nav-btn" onclick="goForward()"><img src="Icons/next.png"></div>
+                    <div id="reset_button" class="nav-btn" onclick="reloadWeb()"><img src="Icons/restart.png" style="transform: rotate(123.76deg);"></div>
+                </div>
+
+                <div id="frame_2">
+                    <div id="see_infomation_website" class="nav-btn nav-btn-trigger" onclick="updateSiteInfoDropdown(); toggleDropdown('dropdown-site-info', event)"><img src="Icons/control.png" style="width:15px;"></div>
+                    <input type="text" id="url_input" value="">
+                    <div id="mark_this_tag_button" class="nav-btn nav-btn-trigger" onclick="openBookmarkDropdown(event)"><img src="Icons/star.png" style="width:15px;"></div>
+                    <div id="find_bar" class="find-bar">
+                        <input id="find_input" type="text" placeholder="Tìm trên trang...">
+                        <button onclick="findPrevious()">◀</button>
+                        <button onclick="findNext()">▶</button>
+                        <button class="btn-close-pop" onclick="closeFindBar()">✕</button>
+                    </div>
+                </div>
+
+                <div id="frame_11">
+                    <div id="downloaded_file_button" class="nav-btn nav-btn-trigger" onclick="toggleDropdown('dropdown-downloads', event)"><img src="Icons/download.png"></div>
+                    <div id="account_button" class="nav-btn nav-btn-trigger" onclick="toggleDropdown('dropdown-profile', event)"><img src="Icons/account.png"></div>
+                    <div id="menu_button" class="nav-btn nav-btn-trigger" onclick="toggleDropdown('dropdown-main-menu', event)"><img src="Icons/menu.png" style="transform: rotate(-45deg);"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="webview_container_root" class="webview-container"></div>
+
+    </div>
+</div>
+
+<div id="custom-context-overlay" style="display: none; position: fixed; inset: 0; z-index: 99990; background: transparent;"></div>
+<div id="custom-context-menu" class="unet-context-menu" style="display: none;">
+    <div class="menu-group-default">
+        <div class="menu-item" onclick="triggerNav('back')">Quay lại (Back)</div>
+        <div class="menu-item" onclick="triggerNav('forward')">Chuyển tiếp (Forward)</div>
+        <div class="menu-item" onclick="triggerNav('reload')">Tải lại (Reload)</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" onclick="triggerNav('save')">Lưu thành... (Save As...)</div>
+        <div class="menu-item" onclick="triggerNav('print')">In... (Print)</div>
+    </div>
+    <div class="menu-group-selection" style="display: none;">
+        <div class="menu-item" onclick="triggerNav('copy')">Sao chép (Copy)</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" id="menu-search-text" onclick="triggerNav('search')">Tìm kiếm trên Google</div>
+    </div>
+    <div class="menu-separator"></div>
+    <div class="menu-item" onclick="triggerNav('source')">Xem nguồn trang (View Source)</div>
+    <div class="menu-item" onclick="triggerNav('inspect')">Kiểm tra (Inspect)</div>
+</div>
+
+<div id="tab-context-menu" class="unet-context-menu" style="display: none; width: 200px;">
+    <div class="menu-item" onclick="closeTabFromMenu()">Đóng tab</div>
+    <div class="menu-item" onclick="closeOtherTabsFromMenu()">Đóng tab khác</div>
+    <div class="menu-item" onclick="closeTabsToRightFromMenu()">Đóng tab bên phải</div>
+</div>
+
+<div id="dropdown-site-info" class="unet-dropdown" style="display: none; left: 20px; top: 75px; width: 260px;">
+    <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <strong class="site-domain">Loading...</strong>
+        <button class="btn-close-pop" onclick="closeAllDropdowns()">✕</button>
+    </div>
+    <div class="dropdown-separator"></div>
+    <div class="dropdown-item" id="security-status"><span class="icon">🔒</span> Đang kiểm tra...</div>
+    <div class="dropdown-item" onclick="alert('Tính năng quản lý Cookie đang được phát triển!')"><span class="icon">🍪</span> Cookies đang sử dụng</div>
+</div>
+
+<div id="dropdown-profile" class="unet-dropdown" style="display: none; right: 80px; top: 45px; width: 240px;">
+    <div class="profile-card">
+        <div class="avatar">V</div>
+        <h3>none</h3>
+        <p>none</p>
+    </div>
+    <div class="dropdown-separator"></div>
+    <div class="dropdown-item"><span class="icon">🔑</span> Mật khẩu & tự động điền</div>
+    <div class="dropdown-item"><span class="icon">🔄</span> Đồng bộ hóa đang bật</div>
+    <div class="dropdown-separator"></div>
+    <div class="dropdown-item"><span class="icon">👤</span> Thêm hồ sơ mới</div>
+</div>
+
+<div id="dropdown-downloads" class="unet-dropdown" style="display: none; right: 50px; top: 45px; width: 300px;">
+    <div class="dropdown-header"><h3>Nhật ký tải xuống gần đây</h3></div>
+    <div class="download-list">
+        <div class="download-empty dropdown-item">Chưa có tệp tải xuống nào.</div>
+    </div>
+    <div class="dropdown-separator"></div>
+    <div class="dropdown-footer" onclick="openDownloadsFolder()">Mở thư mục tải xuống</div>
+</div>
+
+<div id="dropdown-bookmark" class="unet-dropdown" style="display: none; right: 120px; top: 75px; width: 280px;">
+    <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>Bookmark</strong>
+        <button class="btn-clear-list" onclick="clearBookmarks()">Xoá tất cả</button>
+    </div>
+    <div class="bookmark-form">
+        <label>Tên:</label>
+        <input type="text" id="bookmark-name" value="">
+        <label>Thư mục:</label>
+        <select><option>Dấu trang trên thiết bị di động</option></select>
+        <div class="bookmark-actions">
+            <button class="btn-done" onclick="saveCurrentBookmark()">Xong</button>
+            <button class="btn-delete" onclick="closeAllDropdowns()">Huỷ</button>
+        </div>
+    </div>
+    <div class="dropdown-separator"></div>
+    <div class="bookmark-list">
+        <div class="dropdown-item">Chưa có bookmark nào.</div>
+    </div>
+</div>
+
+<div id="dropdown-main-menu" class="unet-dropdown" style="display: none; right: 10px; top: 45px; width: 280px;">
+    <div class="dropdown-item" onclick="createNewTab('https://www.google.com')"><span class="text">Thẻ mới</span><span class="hotkey">Ctrl+T</span></div>
+    <div class="dropdown-item" onclick="reopenLastClosedTab()"><span class="text">Mở lại tab đã đóng</span><span class="hotkey">Ctrl+Shift+T</span></div>
+    <div class="dropdown-item" onclick="destroyTab(currentTabId)"><span class="text">Đóng tab hiện tại</span><span class="hotkey">Ctrl+W</span></div>
+    <div class="dropdown-item" onclick="saveCurrentBookmark()"><span class="text">Đánh dấu trang</span><span class="hotkey">Ctrl+D</span></div>
+    <div class="dropdown-item" onclick="toggleDropdown('dropdown-downloads', event)"><span class="text">Mở tải xuống</span><span class="hotkey">Ctrl+J</span></div>
+    <div class="dropdown-item" onclick="windowAction('open-new-window')"><span class="text">Cửa sổ mới</span><span class="hotkey">Ctrl+N</span></div>
+    <div class="dropdown-item" onclick="openPrivacyMode()"><span class="text">Chế độ riêng tư</span><span class="hotkey">Ctrl+Shift+N</span></div>
+    <div class="dropdown-item" onclick="openBrowserSettings()"><span class="text">Cài đặt trình duyệt</span><span class="hotkey">Ctrl+,</span></div>
+    <div class="dropdown-item" onclick="triggerMenuAction('reload')"><span class="text">Tải lại trang</span><span class="hotkey">Ctrl+R</span></div>
+    <div class="dropdown-separator"></div>
+    <div class="dropdown-item" onclick="openHistory(event)"><span class="text">Lịch sử</span><span class="hotkey">Ctrl+H</span></div>
+    <div class="dropdown-item" onclick="triggerMenuAction('inspect')"><span class="text">Công cụ phát triển (DevTools)</span><span class="hotkey">F12</span></div>
+</div>
+
+<div id="dropdown-history" class="unet-dropdown" style="display: none; right: 10px; top: 105px; width: 320px;">
+    <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>Lịch sử duyệt web</strong>
+        <div>
+            <button class="btn-clear-list" onclick="clearHistory()">Xoá lịch sử</button>
+            <button class="btn-close-pop" onclick="closeAllDropdowns()">✕</button>
+        </div>
+    </div>
+    <div class="dropdown-separator"></div>
+    <div class="history-list">
+        <div class="dropdown-item">Chưa có lịch sử nào.</div>
+    </div>
+</div>
+
+<script>
+    const { ipcRenderer, clipboard } = require('electron');
+    const path = require('path');
+
+    const tabSystemRoot = document.getElementById('tab_system_root');
+    const webviewContainerRoot = document.getElementById('webview_container_root');
+    const urlInput = document.getElementById('url_input');
+    const findBar = document.getElementById('find_bar');
+    const findInput = document.getElementById('find_input');
+
+    let tabCounter = 0;
+    let currentTabId = null;
+    let tabContextId = null;
+    let tabList = {};
+    let closedTabs = [];
+    let selectedTextGlobal = '';
+
+    function windowAction(action) { ipcRenderer.send(action); }
+
+    ipcRenderer.on('window-maximized', () => {
+        document.body.classList.add('maximized');
+    });
+
+    ipcRenderer.on('window-unmaximized', () => {
+        document.body.classList.remove('maximized');
+    });
+
+    function updateTabSizeClasses() {
+        const tabs = tabSystemRoot.querySelectorAll('.tab');
+        const shouldShrink = tabs.length >= 15;
+        tabs.forEach(tab => {
+            tab.classList.toggle('small', shouldShrink);
+        });
+    }
+
+    function createNewTab(initialUrl = "https://www.google.com") {
+        closeAllDropdowns();
+        tabCounter++;
+        const id = tabCounter;
+
+        const tabEl = document.createElement('div');
+        tabEl.id = `tab_${id}`;
+        tabEl.className = "tab inactive";
+        tabEl.onclick = () => switchTab(id);
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar-tab';
+        avatar.innerHTML = '<span>∎</span>';
+
+        const title = document.createElement('div');
+        title.className = "name-tab";
+        title.innerText = "Loading...";
+
+        const closeBtn = document.createElement('div');
+        closeBtn.className = "close-tab-button";
+        closeBtn.innerHTML = `<img src="Icons/close.png" style="width:10px; pointer-events:none;">`;
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            destroyTab(id);
+        };
+
+        tabEl.appendChild(avatar);
+        tabEl.appendChild(title);
+        tabEl.appendChild(closeBtn);
+        tabSystemRoot.appendChild(tabEl);
+        updateTabSizeClasses();
+
+        tabEl.draggable = true;
+        tabEl.addEventListener('dragstart', (evt) => {
+            evt.dataTransfer.effectAllowed = 'move';
+            evt.dataTransfer.setData('text/plain', id.toString());
+            tabEl.classList.add('dragging');
+        });
+        tabEl.addEventListener('dragend', () => {
+            tabEl.classList.remove('dragging');
+            document.querySelectorAll('.tab.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+        tabEl.addEventListener('dragover', (evt) => {
+            evt.preventDefault();
+            const target = evt.currentTarget;
+            if (target !== tabEl) return;
+            target.classList.add('drag-over');
+        });
+        tabEl.addEventListener('dragleave', (evt) => {
+            evt.currentTarget.classList.remove('drag-over');
+        });
+        tabEl.addEventListener('drop', (evt) => {
+            evt.preventDefault();
+            const draggedId = parseInt(evt.dataTransfer.getData('text/plain'), 10);
+            if (Number.isNaN(draggedId) || draggedId === id) return;
+            const draggedTab = document.getElementById(`tab_${draggedId}`);
+            if (!draggedTab) return;
+            const rect = tabEl.getBoundingClientRect();
+            const insertBefore = evt.clientX < rect.left + rect.width / 2;
+            if (insertBefore) {
+                tabSystemRoot.insertBefore(draggedTab, tabEl);
+            } else {
+                tabSystemRoot.insertBefore(draggedTab, tabEl.nextSibling);
+            }
+            document.querySelectorAll('.tab.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+
+        tabEl.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            tabContextId = id;
+            showTabContextMenu(e);
+        });
+
+        const webviewEl = document.createElement('webview');
+        webviewEl.id = `webview_${id}`;
+        webviewEl.src = initialUrl;
+        webviewEl.setAttribute('preload', path.join(__dirname, 'preload.js'));
+        webviewEl.setAttribute('nodeintegration', '');
+        webviewEl.setAttribute('allowpopups', '');
+        webviewContainerRoot.appendChild(webviewEl);
+
+        webviewEl.addEventListener('context-menu', (e) => {
+            e.preventDefault();
+
+            const menu = document.getElementById('custom-context-menu');
+            if (!menu) return;
+
+            const groupDefault = menu.querySelector('.menu-group-default');
+            const groupSelection = menu.querySelector('.menu-group-selection');
+            const searchItem = document.getElementById('menu-search-text');
+
+            selectedTextGlobal = e.params.selectionText || '';
+
+            if (selectedTextGlobal && selectedTextGlobal.trim() !== '') {
+                if (groupDefault) groupDefault.style.display = 'none';
+                if (groupSelection) groupSelection.style.display = 'block';
+                if (searchItem) searchItem.innerText = `Tìm "${selectedTextGlobal.substring(0, 10)}..." trên Google`;
+            } else {
+                if (groupDefault) groupDefault.style.display = 'block';
+                if (groupSelection) groupSelection.style.display = 'none';
+            }
+
+            menu.style.display = 'block';
+
+            const zoomFactor = typeof webviewEl.getZoomFactor === 'function'
+                ? webviewEl.getZoomFactor()
+                : 1;
+            const rect = webviewEl.getBoundingClientRect();
+            const mouseX = rect.left + (e.params.x * zoomFactor);
+            const mouseY = rect.top + (e.params.y * zoomFactor);
+            const menuWidth = menu.offsetWidth || 220;
+            const menuHeight = menu.offsetHeight || 200;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let finalX = mouseX;
+            let finalY = mouseY;
+
+            if (mouseX + menuWidth > windowWidth) {
+                finalX = windowWidth - menuWidth - 5;
+            }
+            if (mouseY + menuHeight > windowHeight) {
+                finalY = windowHeight - menuHeight - 5;
+            }
+            if (finalX < 5) finalX = 5;
+            if (finalY < 5) finalY = 5;
+
+            menu.style.left = `${finalX}px`;
+            menu.style.top = `${finalY}px`;
+            document.getElementById('custom-context-overlay').style.display = 'block';
+        });
+
+        tabList[id] = { tabEl, webviewEl, titleEl: title, avatarEl: avatar };
+
+        webviewEl.addEventListener('ipc-message', (event) => {
+            if (event.channel === 'open-webview-devtools') {
+                if (webviewEl.isDevToolsOpened()) {
+                    webviewEl.closeDevTools();
+                } else {
+                    webviewEl.openDevTools({ mode: 'detach' });
+                }
+            }
+        });
+
+        webviewEl.addEventListener('did-navigate', (event) => {
+            if (id === currentTabId) {
+                urlInput.value = event.url;
+                updateSiteInfoDropdown();
+            }
+            recordHistory(event.url, webviewEl.getTitle());
+        });
+        webviewEl.addEventListener('did-navigate-in-page', (event) => {
+            if (id === currentTabId) {
+                urlInput.value = event.url;
+                updateSiteInfoDropdown();
+            }
+            recordHistory(event.url, webviewEl.getTitle());
+        });
+        webviewEl.addEventListener('page-title-updated', (event) => {
+            tabList[id].titleEl.innerText = event.title || 'Untitled';
+            if (id === currentTabId) updateSiteInfoDropdown();
+            recordHistory(webviewEl.getURL(), event.title);
+        });
+        webviewEl.addEventListener('page-favicon-updated', (event) => {
+            const favicon = event.favicons && event.favicons[0];
+            if (favicon && tabList[id] && tabList[id].avatarEl) {
+                tabList[id].avatarEl.innerHTML = `<img src="${favicon}" alt="favicon">`;
+            }
+        });
+        webviewEl.addEventListener('page-favicon-updated', (event) => {
+            const favicon = event.favicons && event.favicons[0];
+            if (favicon && tabList[id] && tabList[id].avatarEl) {
+                tabList[id].avatarEl.innerHTML = `<img src="${favicon}" alt="favicon">`;
+            }
+        });
+
+        switchTab(id);
+    }
+
+    function getTabIdsInDOMOrder() {
+        return Array.from(tabSystemRoot.querySelectorAll('.tab')).map(tab => parseInt(tab.id.replace('tab_', ''), 10)).filter(id => !Number.isNaN(id));
+    }
+
+    function switchTab(id) {
+        if (!tabList[id]) return;
+
+        if (currentTabId && tabList[currentTabId]) {
+            tabList[currentTabId].tabEl.className = "tab inactive";
+            tabList[currentTabId].webviewEl.classList.remove('active');
+        }
+
+        tabList[id].tabEl.className = "tab active";
+        tabList[id].webviewEl.classList.add('active');
+        currentTabId = id;
+
+        urlInput.value = tabList[id].webviewEl.src === "data:text/html,<html></html>" ? "" : tabList[id].webviewEl.src;
+        updateSiteInfoDropdown();
+    }
+
+    function destroyTab(id) {
+        if (!tabList[id]) return;
+
+        const closedEntry = {
+            url: tabList[id].webviewEl.getURL(),
+            title: tabList[id].titleEl.innerText || 'Tab đã đóng'
+        };
+        closedTabs.unshift(closedEntry);
+        if (closedTabs.length > 20) {
+            closedTabs.length = 20;
+        }
+
+        tabList[id].tabEl.remove();
+        tabList[id].webviewEl.remove();
+        delete tabList[id];
+        updateTabSizeClasses();
+
+        const remainingIds = getTabIdsInDOMOrder();
+        if (remainingIds.length === 0) {
+            createNewTab();
+        } else if (currentTabId === id) {
+            switchTab(remainingIds[remainingIds.length - 1]);
+        }
+    }
+
+    function switchToNextTab() {
+        const ids = getTabIdsInDOMOrder();
+        if (ids.length <= 1 || currentTabId == null) return;
+        const index = ids.indexOf(currentTabId);
+        if (index === -1) return;
+        const nextId = ids[(index + 1) % ids.length];
+        switchTab(nextId);
+    }
+
+    function switchToPreviousTab() {
+        const ids = getTabIdsInDOMOrder();
+        if (ids.length <= 1 || currentTabId == null) return;
+        const index = ids.indexOf(currentTabId);
+        if (index === -1) return;
+        const prevId = ids[(index - 1 + ids.length) % ids.length];
+        switchTab(prevId);
+    }
+
+    function selectTabByPosition(position) {
+        const tabs = Array.from(tabSystemRoot.querySelectorAll('.tab'));
+        if (position < 1 || position > tabs.length) return;
+        const target = tabs[position - 1];
+        if (!target) return;
+        const id = parseInt(target.id.replace('tab_', ''), 10);
+        if (!Number.isNaN(id)) {
+            switchTab(id);
+        }
+    }
+
+    function reopenLastClosedTab() {
+        const entry = closedTabs.shift();
+        if (!entry) return;
+        createNewTab(entry.url);
+    }
+
+    function handleUrlSubmit(e) {
+        const key = e.key || e.code;
+        if (key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            let input = urlInput.value.trim();
+            if (!input) return;
+
+            const looksLikeUrl = input.includes('.') || input.includes('://') || input.startsWith('localhost');
+            if (!looksLikeUrl) {
+                input = 'https://www.google.com/search?q=' + encodeURIComponent(input);
+            } else if (!input.includes('://')) {
+                input = 'https://' + input;
+            }
+
+            if (tabList[currentTabId]) {
+                tabList[currentTabId].webviewEl.src = input;
+            }
+        }
+    }
+    const frame2 = document.getElementById('frame_2');
+    urlInput.addEventListener('keydown', handleUrlSubmit);
+    urlInput.addEventListener('focus', () => frame2 && frame2.classList.add('active-urlbar'));
+    urlInput.addEventListener('blur', () => frame2 && frame2.classList.remove('active-urlbar'));
+
+    function toggleFindBar(show = true) {
+        if (!findBar) return;
+        if (!show) {
+            findBar.style.display = 'none';
+            stopFindInPage();
+            return;
+        }
+
+        findBar.style.display = 'flex';
+        findInput.focus();
+        findInput.select();
+    }
+
+    function stopFindInPage() {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const webview = tabList[currentTabId].webviewEl;
+        if (typeof webview.stopFindInPage === 'function') {
+            webview.stopFindInPage('clearSelection');
+        }
+    }
+
+    function findInPage(query, forward = true) {
+        if (!query || !currentTabId || !tabList[currentTabId]) return;
+        const webview = tabList[currentTabId].webviewEl;
+        if (typeof webview.findInPage === 'function') {
+            webview.findInPage(query, { forward, findNext: true, matchCase: false });
+        }
+    }
+
+    function findNext() { findInPage(findInput.value, true); }
+    function findPrevious() { findInPage(findInput.value, false); }
+
+    findInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            findInPage(findInput.value, !e.shiftKey);
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            toggleFindBar(false);
+        }
+    });
+
+    function triggerNav(action) {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+
+        if (action === 'back') {
+            goBack();
+        } else if (action === 'forward') {
+            goForward();
+        } else if (action === 'reload') {
+            reloadWeb();
+        } else if (action === 'print') {
+            if (activeWebview && typeof activeWebview.print === 'function') {
+                activeWebview.print();
+            }
+        } else if (action === 'save') {
+            saveCurrentPage();
+        } else if (action === 'copy') {
+            if (selectedTextGlobal && selectedTextGlobal.trim()) {
+                clipboard.writeText(selectedTextGlobal);
+            }
+        } else if (action === 'search') {
+            if (selectedTextGlobal && selectedTextGlobal.trim()) {
+                createNewTab(`https://www.google.com/search?q=${encodeURIComponent(selectedTextGlobal)}`);
+            }
+        } else if (action === 'source') {
+            const currentUrl = activeWebview.getURL();
+            createNewTab(`view-source:${currentUrl}`);
+        } else if (action === 'inspect') {
+            if (activeWebview.isDevToolsOpened()) {
+                activeWebview.closeDevTools();
+            } else {
+                activeWebview.openDevTools({ mode: 'detach' });
+            }
+        }
+
+        closeAllDropdowns();
+    }
+
+    async function saveCurrentPage() {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+        if (!activeWebview || typeof activeWebview.savePage !== 'function') {
+            alert('Không thể lưu trang trên trình duyệt này.');
+            return;
+        }
+        const currentUrl = activeWebview.getURL();
+        let suggestedName = 'page.html';
+        try {
+            const urlObj = new URL(currentUrl);
+            suggestedName = `${urlObj.hostname || 'page'}.html`;
+        } catch (err) {
+            suggestedName = 'page.html';
+        }
+
+        try {
+            const downloadsPath = await ipcRenderer.invoke('get-path', 'downloads');
+            const saveTo = path.join(downloadsPath, suggestedName);
+            activeWebview.savePage(saveTo, 'HTMLComplete', (success) => {
+                if (success) {
+                    alert(`Đã lưu trang vào: ${saveTo}`);
+                } else {
+                    alert('Lưu trang thất bại.');
+                }
+            });
+        } catch (error) {
+            console.error('Lỗi khi lưu trang', error);
+            alert('Không thể lưu trang lúc này.');
+        }
+    }
+
+    const contextMenuOverlay = document.getElementById('custom-context-overlay');
+    const contextMenu = document.getElementById('custom-context-menu');
+    const tabContextMenu = document.getElementById('tab-context-menu');
+
+    function hideCustomContextMenu() {
+        contextMenu.style.display = 'none';
+        tabContextMenu.style.display = 'none';
+        contextMenuOverlay.style.display = 'none';
+    }
+
+    function hideAllPanels() {
+        closeAllDropdowns();
+        hideCustomContextMenu();
+    }
+
+    function showTabContextMenu(e) {
+        if (!tabContextMenu) return;
+        hideAllPanels();
+        tabContextMenu.style.display = 'block';
+        const x = Math.min(e.clientX, window.innerWidth - tabContextMenu.offsetWidth - 10);
+        const y = Math.min(e.clientY, window.innerHeight - tabContextMenu.offsetHeight - 10);
+        tabContextMenu.style.left = `${Math.max(x, 5)}px`;
+        tabContextMenu.style.top = `${Math.max(y, 5)}px`;
+        contextMenuOverlay.style.display = 'block';
+    }
+
+    function closeTabFromMenu() {
+        if (tabContextId !== null) destroyTab(tabContextId);
+        tabContextId = null;
+        hideCustomContextMenu();
+    }
+
+    function closeOtherTabsFromMenu() {
+        if (tabContextId === null) return;
+        const ids = getTabIdsInDOMOrder();
+        ids.forEach(tabId => {
+            if (tabId !== tabContextId) destroyTab(tabId);
+        });
+        tabContextId = null;
+        hideCustomContextMenu();
+    }
+
+    function closeTabsToRightFromMenu() {
+        if (tabContextId === null) return;
+        const ids = getTabIdsInDOMOrder();
+        const index = ids.indexOf(tabContextId);
+        if (index === -1) return;
+        const rightIds = ids.slice(index + 1);
+        rightIds.forEach(tabId => destroyTab(tabId));
+        tabContextId = null;
+        hideCustomContextMenu();
+    }
+
+    contextMenuOverlay.addEventListener('mousedown', hideCustomContextMenu);
+    document.addEventListener('mousedown', (event) => {
+        if (contextMenu.style.display === 'block' && !contextMenu.contains(event.target)) {
+            hideCustomContextMenu();
+        }
+    });
+
+    function closeAllDropdowns() {
+        const dropdowns = document.querySelectorAll('.unet-dropdown');
+        dropdowns.forEach(d => d.style.display = 'none');
+    }
+
+    function toggleDropdown(id, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const targetMenu = document.getElementById(id);
+        if (!targetMenu) return;
+
+        const isAlreadyOpen = targetMenu.style.display === 'block' || getComputedStyle(targetMenu).display === 'block';
+        hideAllPanels();
+
+        if (!isAlreadyOpen) {
+            targetMenu.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.unet-dropdown') && !e.target.closest('.nav-btn-trigger') && !e.target.closest('#custom-context-menu') && !e.target.closest('#tab-context-menu')) {
+            hideAllPanels();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        const isMac = navigator.platform.toUpperCase().includes('MAC');
+        const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+        if (ctrlKey && !e.altKey) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    switchToPreviousTab();
+                } else {
+                    switchToNextTab();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                toggleFindBar();
+                return;
+            }
+
+            if (e.shiftKey && e.key.toLowerCase() === 'w') {
+                e.preventDefault();
+                windowAction('window-close');
+                return;
+            }
+
+            if (/^[1-9]$/.test(e.key)) {
+                const tabNumber = parseInt(e.key, 10);
+                if (!Number.isNaN(tabNumber)) {
+                    e.preventDefault();
+                    selectTabByPosition(tabNumber);
+                    return;
+                }
+            }
+
+            switch (e.key.toLowerCase()) {
+                case 't':
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        reopenLastClosedTab();
+                    } else {
+                        createNewTab('https://www.google.com');
+                    }
+                    break;
+                case 'n':
+                    if (e.shiftKey) {
+                        e.preventDefault();
+                        ipcRenderer.send('open-new-window', { incognito: true });
+                    } else {
+                        e.preventDefault();
+                        ipcRenderer.send('open-new-window', { incognito: false });
+                    }
+                    break;
+                case 'w':
+                    e.preventDefault();
+                    if (currentTabId) {
+                        destroyTab(currentTabId);
+                    }
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    saveCurrentBookmark();
+                    break;
+                case 'j':
+                    e.preventDefault();
+                    toggleDropdown('dropdown-downloads', e);
+                    break;
+                case 'l':
+                    e.preventDefault();
+                    urlInput.focus();
+                    urlInput.select();
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    if (currentTabId && tabList[currentTabId]) {
+                        tabList[currentTabId].webviewEl.reload();
+                    }
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    if (currentTabId && tabList[currentTabId]) {
+                        tabList[currentTabId].webviewEl.print();
+                    }
+                    break;
+                case 's':
+                    e.preventDefault();
+                    saveCurrentPage();
+                    break;
+                case 'h':
+                    e.preventDefault();
+                    openHistory();
+                    break;
+            }
+        }
+
+        if (!ctrlKey && !isMac && e.key === 'F5') {
+            e.preventDefault();
+            if (currentTabId && tabList[currentTabId]) {
+                tabList[currentTabId].webviewEl.reload();
+            }
+        }
+
+        if (!ctrlKey && !isMac && e.key === 'Escape') {
+            closeFindBar();
+        }
+
+        if (e.altKey && !ctrlKey && !isMac) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                goBack();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                goForward();
+            }
+        }
+
+        if (e.key === 'F12') {
+            e.preventDefault();
+            triggerMenuAction('inspect');
+        }
+    });
+
+    function triggerMenuAction(action) {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+
+        if (action === 'reload') {
+            activeWebview.reload();
+        } else if (action === 'inspect') {
+            if (activeWebview.isDevToolsOpened()) {
+                activeWebview.closeDevTools();
+            } else {
+                activeWebview.openDevTools({ mode: 'detach' });
+            }
+        }
+
+        closeAllDropdowns();
+    }
+
+    function updateSiteInfoDropdown() {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+        const currentUrl = activeWebview.getURL();
+        const domainSpan = document.querySelector('.site-domain');
+        const securityStatus = document.getElementById('security-status');
+
+        try {
+            const urlObj = new URL(currentUrl);
+            domainSpan.innerText = urlObj.hostname;
+
+            if (urlObj.protocol === 'https:') {
+                securityStatus.innerHTML = '<span class="icon">🔒</span> Kết nối an toàn (HTTPS)';
+                securityStatus.style.color = '#4caf50';
+            } else {
+                securityStatus.innerHTML = '<span class="icon">⚠️</span> Kết nối không an toàn';
+                securityStatus.style.color = '#f44336';
+            }
+        } catch (e) {
+            domainSpan.innerText = 'Trang trống';
+            securityStatus.innerHTML = '<span class="icon">⚠️</span> Không có trang';
+            securityStatus.style.color = '#f44336';
+        }
+    }
+
+    function renderBookmarkList() {
+        const list = document.querySelector('.bookmark-list');
+        const bookmarks = JSON.parse(localStorage.getItem('unet_bookmarks')) || [];
+
+        if (!list) return;
+        if (bookmarks.length === 0) {
+            list.innerHTML = '<div class="dropdown-item">Chưa có bookmark nào.</div>';
+            return;
+        }
+
+        list.innerHTML = bookmarks.map((bookmark, index) => `
+            <div class="dropdown-item bookmark-entry">
+                <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+                    <span>${bookmark.name}</span>
+                    <span class="bookmark-url">${bookmark.url}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-open-bookmark" onclick="openBookmarkUrl(${index})">Mở</button>
+                    <button class="btn-clear-list" onclick="deleteBookmark(${index})">Xóa</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openBookmarkUrl(index) {
+        const bookmarks = JSON.parse(localStorage.getItem('unet_bookmarks')) || [];
+        const bookmark = bookmarks[index];
+        if (!bookmark) return;
+        closeAllDropdowns();
+        createNewTab(bookmark.url);
+    }
+
+    function openBookmarkDropdown(event) {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+        document.getElementById('bookmark-name').value = activeWebview.getTitle() || activeWebview.getURL() || '';
+        renderBookmarkList();
+        toggleDropdown('dropdown-bookmark', event);
+    }
+
+    function saveCurrentBookmark() {
+        if (!currentTabId || !tabList[currentTabId]) return;
+        const activeWebview = tabList[currentTabId].webviewEl;
+        const bName = document.getElementById('bookmark-name').value || activeWebview.getURL();
+        const bUrl = activeWebview.getURL();
+        let bookmarks = JSON.parse(localStorage.getItem('unet_bookmarks')) || [];
+        bookmarks.unshift({ name: bName, url: bUrl });
+        localStorage.setItem('unet_bookmarks', JSON.stringify(bookmarks));
+        alert('Đã lưu dấu trang thành công!');
+        renderBookmarkList();
+        closeAllDropdowns();
+    }
+
+    function deleteBookmark(index) {
+        let bookmarks = JSON.parse(localStorage.getItem('unet_bookmarks')) || [];
+        bookmarks.splice(index, 1);
+        localStorage.setItem('unet_bookmarks', JSON.stringify(bookmarks));
+        renderBookmarkList();
+    }
+
+    function clearBookmarks() {
+        localStorage.removeItem('unet_bookmarks');
+        renderBookmarkList();
+    }
+
+    function renderHistoryList() {
+        const list = document.querySelector('.history-list');
+        const history = JSON.parse(localStorage.getItem('unet_history') || '[]');
+
+        if (!list) return;
+        if (history.length === 0) {
+            list.innerHTML = '<div class="dropdown-item">Chưa có lịch sử nào.</div>';
+            return;
+        }
+
+        list.innerHTML = history.map((item, index) => `
+            <div class="dropdown-item history-entry">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <span>${item.title}</span>
+                    <span class="history-url">${item.url}</span>
+                    <div class="history-meta">${new Date(item.time).toLocaleString()}</div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-open-bookmark" onclick="openHistoryUrl(${index})">Mở</button>
+                    <button class="btn-clear-list" onclick="deleteHistoryEntry(${index})">Xóa</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openHistoryUrl(index) {
+        const history = JSON.parse(localStorage.getItem('unet_history') || '[]');
+        const entry = history[index];
+        if (!entry) return;
+        closeAllDropdowns();
+        createNewTab(entry.url);
+    }
+
+    function openHistory(event) {
+        if (event) event.stopPropagation();
+        const historyDropdown = document.getElementById('dropdown-history');
+        renderHistoryList();
+        closeAllDropdowns();
+        historyDropdown.style.display = 'block';
+    }
+
+    function openPrivacyMode() {
+        closeAllDropdowns();
+        ipcRenderer.send('open-incognito-window');
+    }
+
+    function openBrowserSettings() {
+        closeAllDropdowns();
+        const settingsHtml = encodeURIComponent(`<!doctype html><html><head><meta charset="utf-8"><title>Unet Settings</title><style>body{margin:0;background:#111;color:#fff;font-family:Inter,system-ui;display:flex;flex-direction:column;min-height:100vh}.panel{padding:24px;max-width:960px;margin:auto}.panel h1{margin:0 0 20px;font-size:28px}.setting{margin-bottom:18px}.setting label{display:block;font-size:13px;color:#bbb;margin-bottom:8px}.setting input, .setting select{width:100%;padding:12px;border-radius:12px;border:1px solid #333;background:#121212;color:#fff;}</style></head><body><div class="panel"><h1>Cài đặt Unet</h1><div class="setting"><label>Chế độ khởi động</label><select><option>Trang chủ</option><option>Tab mới</option></select></div><div class="setting"><label>Chế độ riêng tư</label><select><option>Không bật</option><option>Bật khi khởi động</option></select></div><div class="setting"><label>Giao diện</label><select><option>Tối</option><option>Sáng</option></select></div><div class="setting"><label>Hỗ trợ Snap Windows</label><select><option>Bật</option><option>Tắt</option></select></div></div></body></html>`);
+        createNewTab(`data:text/html,${settingsHtml}`);
+    }
+
+    function deleteHistoryEntry(index) {
+        let history = JSON.parse(localStorage.getItem('unet_history') || '[]');
+        history.splice(index, 1);
+        localStorage.setItem('unet_history', JSON.stringify(history));
+        renderHistoryList();
+    }
+
+    function clearHistory() {
+        localStorage.removeItem('unet_history');
+        renderHistoryList();
+    }
+
+    async function openDownloadsFolder() {
+        closeAllDropdowns();
+        try {
+            await ipcRenderer.invoke('open-downloads-folder');
+        } catch (error) {
+            console.error('Không thể mở thư mục tải xuống', error);
+        }
+    }
+
+    ipcRenderer.on('download-started', (event, file) => {
+        const list = document.querySelector('.download-list');
+        const downloadsDropdown = document.getElementById('dropdown-downloads');
+        downloadsDropdown.style.display = 'block';
+
+        const safeId = `file-${file.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        const itemHtml = `
+            <div class="download-item-file" id="${safeId}">
+                <span class="file-icon">📄</span>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-meta" id="status-${safeId}">Đang bắt đầu tải...</div>
+                </div>
+            </div>
+        `;
+        const existingEmpty = list.querySelector('.download-empty');
+        if (existingEmpty) existingEmpty.remove();
+        list.insertAdjacentHTML('afterbegin', itemHtml);
+    });
+
+    ipcRenderer.on('download-status', (event, file) => {
+        const safeId = `file-${file.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        const statusEl = document.getElementById(`status-${safeId}`);
+        if (statusEl) {
+            statusEl.innerText = file.status;
+        }
+    });
+
+    ipcRenderer.on('nav-back', () => { goBack(); });
+    ipcRenderer.on('nav-forward', () => { goForward(); });
+    ipcRenderer.on('nav-reload', () => { reloadWeb(); });
+    ipcRenderer.on('open-search-tab', (event, url) => { createNewTab(url); });
+    ipcRenderer.on('trigger-f12', () => {
+        if (currentTabId && tabList[currentTabId]) {
+            const webviewEl = tabList[currentTabId].webviewEl;
+            if (webviewEl.isDevToolsOpened()) {
+                webviewEl.closeDevTools();
+            } else {
+                webviewEl.openDevTools({ mode: 'detach' });
+            }
+        }
+    });
+    ipcRenderer.on('view-source', () => {
+        if (currentTabId && tabList[currentTabId]) {
+            const currentUrl = tabList[currentTabId].webviewEl.getURL();
+            createNewTab(`view-source:${currentUrl}`);
+        }
+    });
+
+    function goBack() {
+        if (tabList[currentTabId]) {
+            const wv = tabList[currentTabId].webviewEl;
+            if (wv.canGoBack()) wv.goBack();
+        }
+    }
+    function goForward() {
+        if (tabList[currentTabId]) {
+            const wv = tabList[currentTabId].webviewEl;
+            if (wv.canGoForward()) wv.goForward();
+        }
+    }
+    function reloadWeb() {
+        if (tabList[currentTabId]) tabList[currentTabId].webviewEl.reload();
+    }
+
+    createNewTab("https://www.google.com");
+</script>
+</body>
+</html>
