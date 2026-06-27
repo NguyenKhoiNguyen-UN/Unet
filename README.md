@@ -35,4 +35,7 @@ To launch Unet, run the following command in your terminal: "npm start"
 1. Developer: Nguyễn Khôi Nguyên
 2. GitHub: <NguyenKhoiNguyen-UN>
 
+### Download for Windows 
+You can download ##Unet on this link: (https://github.com/NguyenKhoiNguyen-UN/Unet-1/releases)
+
 Thank you for exploring Unet Browser! Feel free to submit issues or feature requests.
