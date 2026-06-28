@@ -64,6 +64,21 @@ To launch Unet, run the following command in your terminal: "npm start"
 1. Developer: Nguyễn Khôi Nguyên
 2. GitHub: <NguyenKhoiNguyen-UN>
 
+---
+
+## ⚠️ OS Compatibility & UI Warning
+
+> [!WARNING]
+> **Visual Effects (Mica/Acrylic) Compatibility Notice:**
+> * **Windows 11:** Fully supported. The application features dynamic Mica and Acrylic blur effects that sync beautifully with your system theme and wallpaper.
+> * **Windows 10 down to Windows 7:** Due to operating system architectural limitations, these advanced blur effects **cannot be rendered**. 
+>   * *What happens?* The interface will automatically fallback to a flat, solid dark theme. 
+>   * *Why?* This ensures the application remains highly performant, lightweight, and completely free of lag or visual glitches on older Windows environments.
+
+*Note for Windows 11 users: If the transparency effects do not appear, make sure that **Transparency effects** is toggled ON in your OS settings (`Settings > Personalization > Colors`).*
+
+--
+
 ### Download for Windows 
 1. You can download ***Unet*** on this link: https://github.com/NguyenKhoiNguyen-UN/Unet/releases
 2. You can download ***latest Unet version*** on this link: https://github.com/NguyenKhoiNguyen-UN/Unet/releases/tag/1.64.10
