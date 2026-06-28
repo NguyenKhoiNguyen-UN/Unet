@@ -64,6 +64,7 @@ To launch Unet, run the following command in your terminal: "npm start"
 1. Developer: Nguyễn Khôi Nguyên
 2. GitHub: <NguyenKhoiNguyen-UN>
 
+
 ## 💻 System Requirements
 
 To run **Unet** smoothly, your system should meet the following minimum specifications:
@@ -80,6 +81,7 @@ To run **Unet** smoothly, your system should meet the following minimum specific
 > An active internet connection is required since Unet integrates web-based services directly into its interface.
 
 
+
 ## ⚠️ OS Compatibility & UI Warning
 
 > [!WARNING]
@@ -91,7 +93,7 @@ To run **Unet** smoothly, your system should meet the following minimum specific
 
 *Note for Windows 11 users: If the transparency effects do not appear, make sure that **Transparency effects** is toggled ON in your OS settings (`Settings > Personalization > Colors`).*
 
---
+
 
 ### Download for Windows 
 1. You can download ***Unet*** on this link: https://github.com/NguyenKhoiNguyen-UN/Unet/releases
