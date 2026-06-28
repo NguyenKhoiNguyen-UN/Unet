@@ -1,4 +1,4 @@
-# Unet Browser (beta1)
+# Unet Browser Beta
 
 Unet is a lightweight, high-performance, and minimal desktop web browser built on top of Electron and webview technologies. Designed with a clean interface and optimized resource management, Unet provides a seamless multi-tab browsing experience without overwhelming system memory.
 
@@ -36,6 +36,10 @@ To launch Unet, run the following command in your terminal: "npm start"
 2. GitHub: <NguyenKhoiNguyen-UN>
 
 ### Download for Windows 
-You can download ##Unet on this link: (https://github.com/NguyenKhoiNguyen-UN/Unet-1/releases)
+You can download ##Unet on this link: https://github.com/NguyenKhoiNguyen-UN/Unet/releases
+You can download latest ##Unet version on this link: https://github.com/NguyenKhoiNguyen-UN/Unet/releases/tag/1.64.10
 
 Thank you for exploring Unet Browser! Feel free to submit issues or feature requests.
+
+
+ver:1.64.10
