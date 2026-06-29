@@ -67,19 +67,18 @@ To launch Unet, run the following command in your terminal: "npm start"
 
 ## 💻 System Requirements
 
-To run **Unet** smoothly, your system should meet the following minimum specifications:
+To run **Unet** smoothly, your system must meet the following minimum specifications:
 
 | Component | Minimum Requirement | Recommended Specification |
 | :--- | :--- | :--- |
-| **Operating System** | Windows 7 (64-bit) or higher | Windows 11 (64-bit) *for best UI effects* |
+| **Operating System** | Windows 10 (64-bit, Version 1903 or higher) | Windows 11 (64-bit) *for best UI effects* |
 | **Processor** | Intel Core i3 / AMD Ryzen 3 or equivalent | Intel Core i5 / AMD Ryzen 5 or higher |
 | **Memory (RAM)** | 2 GB RAM | 4 GB RAM or more |
 | **Storage** | 500 MB available space | 1 GB available space *(for app & web cache)* |
 | **Graphics** | Any standard integrated graphics | DirectX 11 compatible graphics |
 
-> [!NOTE]
-> An active internet connection is required since Unet integrates web-based services directly into its interface.
-
+> [!CAUTION]
+> **Legacy Windows Support:** Windows 7, 8, and 8.1 are **strictly NOT supported** due to modern Electron framework and Chromium core limitations. Running the app on these systems will trigger a *"not a valid Win32 application"* error.
 
 
 ## ⚠️ OS Compatibility & UI Warning
